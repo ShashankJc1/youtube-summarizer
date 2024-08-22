@@ -3,6 +3,10 @@ from flask import Flask, jsonify, render_template, request
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 from youtube_transcript_api import YouTubeTranscriptApi
 from pymongo import MongoClient
+import tensorflow as tf
+
+# Suppress TensorFlow warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 app = Flask(__name__)
 
