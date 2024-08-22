@@ -60,7 +60,7 @@ optree==0.12.1
 packaging==24.1
 preshed==3.0.9
 proto-plus==1.24.0
-protobuf==4.25.4
+protobuf==3.19.6  # Downgraded to a version compatible with TensorFlow
 pyasn1==0.6.0
 pyasn1_modules==0.4.0
 pydantic==2.8.2
