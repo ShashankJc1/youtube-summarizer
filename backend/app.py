@@ -6,6 +6,18 @@ from pymongo import MongoClient
 
 app = Flask(__name__)
 
+# Load Google Cloud credentials from environment variable
+google_credentials_json = os.getenv('GOOGLE_CLOUD_CREDENTIALS_JSON')
+
+if google_credentials_json:
+    # Write the JSON content to a temporary file
+    with open('/tmp/google-credentials.json', 'w') as f:
+        f.write(google_credentials_json)
+    # Point GOOGLE_APPLICATION_CREDENTIALS to this temporary file
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/tmp/google-credentials.json'
+else:
+    raise Exception("Google Cloud credentials not found in environment variables.")
+
 # MongoDB setup
 client = MongoClient('mongodb://localhost:27017/')
 db = client['youtube_summarizer']
