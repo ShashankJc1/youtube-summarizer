@@ -1,6 +1,6 @@
 import os
+from flask import Flask, jsonify, render_template, request
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
-from flask import Flask, request, jsonify, render_template
 from youtube_transcript_api import YouTubeTranscriptApi
 from pymongo import MongoClient
 
@@ -10,10 +10,8 @@ app = Flask(__name__)
 google_credentials_json = os.getenv('GOOGLE_CLOUD_CREDENTIALS_JSON')
 
 if google_credentials_json:
-    # Write the JSON content to a temporary file
     with open('/tmp/google-credentials.json', 'w') as f:
         f.write(google_credentials_json)
-    # Point GOOGLE_APPLICATION_CREDENTIALS to this temporary file
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/tmp/google-credentials.json'
 else:
     raise Exception("Google Cloud credentials not found in environment variables.")
@@ -65,11 +63,11 @@ def summarize():
         transcript_text = " ".join([item['text'] for item in transcript])
 
         # Ensure the transcript text is not too short
-        if len(transcript_text.split()) < 50:  # Arbitrary limit for minimum words
+        if len(transcript_text.split()) < 50:
             return jsonify({'error': 'Transcript too short to summarize effectively'}), 400
 
         # Truncate the text if it's too long
-        max_input_length = 1024  # Maximum token length for the model
+        max_input_length = 1024
         tokens = tokenizer.encode(transcript_text, truncation=True, max_length=max_input_length)
         truncated_text = tokenizer.decode(tokens, skip_special_tokens=True)
 
@@ -87,4 +85,5 @@ def summarize():
         return jsonify({'error': f'An error occurred: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))  # Use the PORT environment variable or default to 5000
+    app.run(host='0.0.0.0', port=port)
