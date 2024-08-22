@@ -3,10 +3,6 @@ from flask import Flask, jsonify, render_template, request
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 from youtube_transcript_api import YouTubeTranscriptApi
 from pymongo import MongoClient
-import tensorflow as tf
-
-# Suppress TensorFlow warnings
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 app = Flask(__name__)
 
@@ -25,10 +21,8 @@ client = MongoClient('mongodb://localhost:27017/')
 db = client['youtube_summarizer']
 summaries_collection = db['summaries']
 
-# Load the tokenizer and model
-tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large-cnn")
-model = AutoModelForSeq2SeqLM.from_pretrained("facebook/bart-large-cnn")
-summarizer = pipeline("summarization", model=model, tokenizer=tokenizer)
+# Initialize summarizer as None to delay model loading
+summarizer = None
 
 @app.route('/')
 def index():
@@ -36,6 +30,7 @@ def index():
 
 @app.route('/summarize', methods=['POST'])
 def summarize():
+    global summarizer
     try:
         data = request.json
         video_url = data.get('video_url')
@@ -70,12 +65,18 @@ def summarize():
         if len(transcript_text.split()) < 50:
             return jsonify({'error': 'Transcript too short to summarize effectively'}), 400
 
+        # Lazy load the model only when needed
+        if summarizer is None:
+            tokenizer = AutoTokenizer.from_pretrained("sshleifer/distilbart-cnn-12-6")
+            model = AutoModelForSeq2SeqLM.from_pretrained("sshleifer/distilbart-cnn-12-6")
+            summarizer = pipeline("summarization", model=model, tokenizer=tokenizer)
+
         # Truncate the text if it's too long
         max_input_length = 1024
         tokens = tokenizer.encode(transcript_text, truncation=True, max_length=max_input_length)
         truncated_text = tokenizer.decode(tokens, skip_special_tokens=True)
 
-        summary = summarizer(truncated_text, max_length=250, min_length=100, do_sample=False)[0]['summary_text']
+        summary = summarizer(truncated_text, max_length=250, min_length=100, do_sample=False, clean_up_tokenization_spaces=True)[0]['summary_text']
 
         # Store the summary in MongoDB
         summaries_collection.insert_one({"video_id": video_id, "summary": summary})
